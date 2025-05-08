@@ -100,7 +100,7 @@ Use responsibly and only in lab/test environments.
 
 ---
 
-## 📜 License
+## License
 
 MIT License  
 > These scripts are intended for **test/lab use only**. Do not use in production environments.
