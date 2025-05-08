@@ -1,5 +1,3 @@
-# test-wua-detach-wsus-sccm
-
 # Windows Update Source Assessment and Reset Scripts
 
 ##  IMPORTANT DISCLAIMER
