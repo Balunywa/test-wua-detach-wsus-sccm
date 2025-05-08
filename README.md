@@ -73,11 +73,14 @@ If your environment is managed via Active Directory and you do **not** control G
    ↳ Review log and verify WUA now uses Microsoft Update
 3. Move VM to GPO-neutral OU or isolate from domain if needed
 
+---
 ## Log Output
 Both scripts save their logs in the same directory where the script is located, with a timestamped .log file name for easy review and auditing.
 
+---
 ## Author Notes
 These scripts were created to provide internal validation and reproducibility during test scenarios involving Windows Update, Azure Arc, and other configuration validation use cases. Use responsibly.
 
+---
 ##  License
 MIT License – but again, these are intended for test use only.
