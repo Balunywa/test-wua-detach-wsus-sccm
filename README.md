@@ -34,7 +34,7 @@ This **read-only script** checks and logs the following:
 - Whether the SCCM client (`CcmExec`) is installed and running
 - Whether Group Policy registry keys exist that redirect the VM to WSUS
 
-📥 **Run this script first** to understand the current state of your VM.
+ **Run this script first** to understand the current state of your VM.
 
 ---
 
@@ -49,7 +49,7 @@ This **reset script** attempts to:
 - Trigger a manual update scan
 - Log everything for review
 
-📥 **Run this second** — but only after reviewing the assessment results and confirming this is a test machine.
+ **Run this second** — but only after reviewing the assessment results and confirming this is a test machine.
 
 ---
 
@@ -64,23 +64,43 @@ If your environment is managed via Active Directory and you do **not** control G
 
 ---
 
-## Recommended Flow
+##  Recommended Usage Flow
 
-```text
-1. Run Check-WUAUpdateSource.ps1
-   ↳ Review log output
-2. If safe, run Reset-WindowsUpdateSource.ps1
-   ↳ Review log and verify WUA now uses Microsoft Update
-3. Move VM to GPO-neutral OU or isolate from domain if needed
+1. **Run `Check-WUAUpdateSource.ps1`**  
+   Review the log output to confirm the current Windows Update source, SCCM client status, and any WSUS GPO configuration.
+
+2. **If safe, run `Reset-WindowsUpdateSource.ps1`**  
+   This removes WSUS registry settings, disables SCCM, registers Microsoft Update, restarts the Windows Update service, and triggers a scan.  
+   Review the log to ensure the WUA is now using Microsoft Update.
+
+3. **Move the VM to a GPO-neutral OU (if needed)**  
+   Group Policies will reapply unless the VM is:
+   - Moved to an OU that does **not apply WSUS/SCCM policies**, or
+   - Disconnected from domain GPO enforcement (e.g., local-only environment)
+
+>  **Important:** Even after running the reset script, GPOs will override your changes unless the VM is isolated from WSUS/SCCM-related policies.
 
 ---
+
 ## Log Output
-Both scripts save their logs in the same directory where the script is located, with a timestamped .log file name for easy review and auditing.
+
+Each script writes a log file in the same directory where it's executed.  
+The file is timestamped (e.g., `WUA_Reset_20250508_112503.log`) for easy review and tracking.
 
 ---
+
 ## Author Notes
-These scripts were created to provide internal validation and reproducibility during test scenarios involving Windows Update, Azure Arc, and other configuration validation use cases. Use responsibly.
+
+These scripts were developed to assist with internal validation and reproducibility during test scenarios involving:
+- Windows Update behavior
+- Azure Arc integration
+- SCCM/WSUS detachment testing
+
+Use responsibly and only in lab/test environments.
 
 ---
-##  License
-MIT License – but again, these are intended for test use only.
+
+## 📜 License
+
+MIT License  
+> These scripts are intended for **test/lab use only**. Do not use in production environments.
