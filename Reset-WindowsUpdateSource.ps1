@@ -3,10 +3,22 @@ $logPath = "$PSScriptRoot\WUA_Reset_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
 
 function Write-Log {
     param([string]$message)
-    $message | Tee-Object -FilePath $logPath -Append
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    "$timestamp`t$message" | Tee-Object -FilePath $logPath -Append
 }
 
-Write-Log "`n=== Resetting WSUS/SCCM Update Configuration ==="
+Write-Log "`n=== Starting WSUS/SCCM Update Configuration Reset ==="
+
+# Detect OS version
+$os = Get-CimInstance -ClassName Win32_OperatingSystem
+$version = [version]$os.Version
+if ($version -ge [version]"10.0.14393") {
+    Write-Log "Detected Windows Server 2016 or later (Build $($version.ToString()))."
+    $is2016Plus = $true
+} else {
+    Write-Log "Detected pre-2016 Windows Server (Build $($version.ToString()))."
+    $is2016Plus = $false
+}
 
 # 1. Remove WSUS Group Policy registry keys
 try {
@@ -34,13 +46,23 @@ try {
     Write-Log "SCCM client service not found or already disabled."
 }
 
-# 3. Force registration with Microsoft Update (not just Windows Update)
+# 3. Enable Microsoft Update (branch by OS)
 try {
-    $ServiceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
-    $ServiceManager.AddService2('7971f918-a847-4430-9279-4a52d1efe18d', 7, '')
-    Write-Log "Microsoft Update service registered successfully."
+    if ($is2016Plus) {
+        Write-Log "Using registry method to enable Microsoft Update on 2016+."
+        # Use registry keys instead of COM on 2016+
+        New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" -Force | Out-Null
+        New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU" `
+            -Name "UseWUServer" -Value 0 -PropertyType DWORD -Force
+        Write-Log "Registry configured for Microsoft Update (UseWUServer=0)."
+    } else {
+        Write-Log "Using COM method to register Microsoft Update on pre-2016."
+        $svcMgr = New-Object -ComObject "Microsoft.Update.ServiceManager"
+        $svcMgr.AddService2('7971f918-a847-4430-9279-4a52d1efe18d', 7, '')
+        Write-Log "Microsoft Update service registered via COM."
+    }
 } catch {
-    Write-Log "Failed to register Microsoft Update service: $_"
+    Write-Log "Failed to enable Microsoft Update: $_"
 }
 
 # 4. Restart the Windows Update Agent service
@@ -62,8 +84,8 @@ try {
 # 6. Confirm current default update source
 try {
     Write-Log "`n=== Current Windows Update Source ==="
-    $ServiceManager = New-Object -ComObject "Microsoft.Update.ServiceManager"
-    $ServiceManager.Services | ForEach-Object {
+    $svcMgr2 = New-Object -ComObject "Microsoft.Update.ServiceManager"
+    $svcMgr2.Services | ForEach-Object {
         $line = "Name: $($_.Name) | ServiceID: $($_.ServiceID) | IsDefault: $($_.IsDefaultAUService)"
         Write-Log $line
     }
@@ -72,3 +94,4 @@ try {
 }
 
 Write-Log "`n=== Reset Complete. Log saved to $logPath ==="
+
